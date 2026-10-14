@@ -2,6 +2,7 @@ from fastapi import FastAPI,HTTPException
 from schema import TripRequest
 from services.geocode import geocode_city
 from services.weather import get_weather
+from services.places import get_places
 
 app = FastAPI()
 
@@ -23,4 +24,11 @@ async def geocode(city:str):
 @app.get("/weather")
 async def weather(lat: float, lon: float, days: int):
     result = await get_weather(lat,lon,days)
+    return result
+
+@app.get("/places")
+async def places(lat: float, lon: float, category: str, radius: int):
+    result = await get_places(lat,lon,category,radius)
+    if result is None:
+        raise HTTPException(status_code=400, detail="Unknown category")
     return result
