@@ -3,6 +3,7 @@ from schema import TripRequest
 from services.geocode import geocode_city
 from services.weather import get_weather
 from services.places import get_places
+from services.planner import group_into_days
 
 app = FastAPI()
 
@@ -11,8 +12,18 @@ def health():
     return {"status": "ok"}
 
 @app.post("/plan/trip")
-def plan_trip(trip: TripRequest):
-    return {"received": trip}
+async def plan_trip(trip: TripRequest):
+    location = await geocode_city(trip.destination)
+    if location is None:
+        raise HTTPException(status_code=404, detail="city not found")
+
+    places = await get_places(location["lat"], location["lon"], "attraction", 10000)
+    if not places:
+        raise HTTPException(status_code=404, detail="no places found")
+
+    days = group_into_days(places, trip.days, per_day=3)
+
+    return {"destination": location["name"], "days": days}
 
 @app.get("/geocode")
 async def geocode(city:str):
