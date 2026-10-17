@@ -39,9 +39,13 @@ def total_cost(prices, nights, days, num_places, i):
     )
 
 
-def estimate_range(tier, days, num_places, budget):
+def estimate_range(tier, days, num_places, budget, stay_per_night=None):
     prices = load_costs()[tier]
     nights = max(days - 1, 0)
+
+    if stay_per_night is not None:
+        prices = dict(prices)
+        prices["stay"] = [stay_per_night, stay_per_night]
 
     low = total_cost(prices, nights, days, num_places, 0)
     high = total_cost(prices, nights, days, num_places, 1)
@@ -53,17 +57,20 @@ def estimate_range(tier, days, num_places, budget):
     else:
         verdict = "comfortable"
 
+    confidence = "tier estimate"
+    if stay_per_night is not None:
+        confidence = "tier estimate, using your hotel price"
+
     return {
         "tier": tier,
         "low": low,
         "high": high,
         "budget": budget,
         "verdict": verdict,
-        "confidence": "tier estimate",
+        "confidence": confidence,
     }
-
 
 if __name__ == "__main__":
     print(estimate_range("B", 3, 9, 10000))
-    print(estimate_range("B", 3, 9, 4000))
-    print(estimate_range("B", 3, 9, 20000))
+    print(estimate_range("B", 3, 9, 10000, 2500))
+    print(estimate_range("B", 3, 9, 10000, 6000))
