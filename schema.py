@@ -1,7 +1,7 @@
-from pydantic import BaseModel
+from pydantic import BaseModel,Field
 
 class TripRequest(BaseModel):
-    destination: str
-    days: int
-    budget: int
-    stay_per_night: int | None = None
+    destination: str = Field(min_length=2, max_length=100)
+    days: int = Field(ge=1, le=7)
+    budget: int = Field(gt=0)
+    stay_per_night: int | None = Field(default=None, gt=0)

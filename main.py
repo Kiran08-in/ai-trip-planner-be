@@ -5,8 +5,16 @@ from services.weather import get_weather
 from services.places import get_places
 from services.planner import group_into_days
 import asyncio
+from services.budget import pick_tier, estimate_range
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.get("/health")
 def health():
@@ -39,14 +47,19 @@ async def plan_trip(trip: TripRequest):
     weather = await get_weather(location["lat"], location["lon"], trip.days)
 
     plan = []
+    planned_places = 0
     for i, day_places in enumerate(days):
+        planned_places += len(day_places)
         plan.append({
             "day": i + 1,
             "weather": weather[i] if i < len(weather) else None,
             "places": day_places,
         })
 
-    return {"destination": location["name"], "plan": plan}
+    tier = pick_tier(location["population"], len(places))
+    cost = estimate_range(tier, len(days), planned_places, trip.budget, trip.stay_per_night)
+
+    return {"destination": location["name"], "plan": plan, "cost": cost}
 
 @app.get("/geocode")
 async def geocode(city:str):
