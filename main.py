@@ -7,6 +7,7 @@ from services.planner import group_into_days
 import asyncio
 from services.budget import pick_tier, estimate_range
 from fastapi.middleware.cors import CORSMiddleware
+from services.clothing import packing_for_day
 
 app = FastAPI()
 app.add_middleware(
@@ -50,10 +51,12 @@ async def plan_trip(trip: TripRequest):
     planned_places = 0
     for i, day_places in enumerate(days):
         planned_places += len(day_places)
+        day_weather = weather[i] if i < len(weather) else None
         plan.append({
             "day": i + 1,
-            "weather": weather[i] if i < len(weather) else None,
+            "weather": day_weather,
             "places": day_places,
+            "packing": packing_for_day(day_weather, day_places),
         })
 
     tier = pick_tier(location["population"], len(places))
