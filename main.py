@@ -4,10 +4,11 @@ from services.geocode import geocode_city
 from services.weather import get_weather
 from services.places import get_places
 from services.planner import group_into_days
-import asyncio
+import httpx
 from services.budget import pick_tier, estimate_range
 from fastapi.middleware.cors import CORSMiddleware
 from services.clothing import packing_for_day
+from services.wiki_pedia import get_nearby_places
 
 app = FastAPI()
 app.add_middleware(
@@ -27,25 +28,17 @@ async def plan_trip(trip: TripRequest):
     if location is None:
         raise HTTPException(status_code=404, detail="city not found")
 
-    categories = ["attraction", "beach", "temple", "viewpoint", "park"]
-    places = []
-    seen = set()
-    for cat in categories:
-        try:
-            found = await get_places(location["lat"], location["lon"], cat, 10000)
-        except HTTPException:
-            continue
-        for p in found:
-            if p["name"] not in seen:
-                seen.add(p["name"])
-                places.append(p)
-        await asyncio.sleep(2)
-
+    places = await get_nearby_places(location["lat"], location["lon"])
     if not places:
         raise HTTPException(status_code=404, detail="no places found")
 
-    days = group_into_days(places, trip.days, per_day=3)
-    weather = await get_weather(location["lat"], location["lon"], trip.days)
+    per_day = max(1, min(4, len(places) // trip.days))
+    days = group_into_days(places, trip.days, per_day=per_day)
+
+    try:
+        weather = await get_weather(location["lat"], location["lon"], trip.days)
+    except (httpx.HTTPError, KeyError, ValueError):
+        weather = []
 
     plan = []
     planned_places = 0
@@ -60,9 +53,13 @@ async def plan_trip(trip: TripRequest):
         })
 
     tier = pick_tier(location["population"], len(places))
-    cost = estimate_range(tier, len(days), planned_places, trip.budget, trip.stay_per_night)
+    cost = estimate_range(tier, len(days), planned_places, trip.budget)
 
-    return {"destination": location["name"], "plan": plan, "cost": cost}
+    note = None
+    if len(days) < trip.days:
+        note = f"We found only {len(places)} places, so the plan has {len(days)} days."
+
+    return {"destination": location["name"], "plan": plan, "cost": cost, "note": note}
 
 @app.get("/geocode")
 async def geocode(city:str):

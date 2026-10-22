@@ -4,4 +4,3 @@ class TripRequest(BaseModel):
     destination: str = Field(min_length=2, max_length=100)
     days: int = Field(ge=1, le=7)
     budget: int = Field(gt=0)
-    stay_per_night: int | None = Field(default=None, gt=0)

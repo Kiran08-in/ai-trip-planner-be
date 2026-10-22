@@ -9,7 +9,6 @@ async def geocode_city(city: str):
         response = await client.get(url, params=params, headers=headers)
 
     data = response.json()
-    print(data)
     if not data: 
         return None
 
