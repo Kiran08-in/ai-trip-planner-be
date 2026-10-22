@@ -1,0 +1,50 @@
+from services.planner import haversine_km, group_into_days
+from services.budget import pick_tier
+from services.clothing import packing_for_day
+from services.wiki_pedia import kind_of
+
+
+def test_haversine_same_point_is_zero():
+    assert haversine_km(15.5, 73.7, 15.5, 73.7) == 0
+
+
+def test_haversine_one_degree_of_latitude():
+    assert 110 < haversine_km(0, 0, 1, 0) < 112
+
+
+def test_group_into_days_splits_places():
+    places = [{"name": str(i), "lat": 15 + i * 0.01, "lon": 73.0} for i in range(6)]
+    days = group_into_days(places, 2, per_day=3)
+    assert len(days) == 2
+    assert all(len(d) == 3 for d in days)
+
+
+def test_pick_tier_unknown_population_is_b():
+    assert pick_tier(None, 10) == "B"
+
+
+def test_pick_tier_big_city_is_a():
+    assert pick_tier(6_000_000, 5) == "A"
+
+
+def test_pick_tier_many_places_moves_up():
+    assert pick_tier(150_000, 10) == "C"
+    assert pick_tier(150_000, 50) == "B"
+
+
+def test_packing_rain_adds_umbrella():
+    weather = {"temp_max": 28, "rain_chance": 80}
+    assert "Umbrella or light raincoat" in packing_for_day(weather, [])
+
+
+def test_packing_without_weather_does_not_crash():
+    result = packing_for_day(None, [{"type": "temple"}])
+    assert result == ["Cover shoulders and knees, and wear shoes that come off easily"]
+
+
+def test_kind_of_temple():
+    assert kind_of("Konark Sun Temple") == "temple"
+
+
+def test_kind_of_skips_stations():
+    assert kind_of("Puri Railway Station") is None
