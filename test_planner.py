@@ -48,3 +48,27 @@ def test_kind_of_temple():
 
 def test_kind_of_skips_stations():
     assert kind_of("Puri Railway Station") is None
+
+def make_weather(**changes):
+    w = {
+        "temp_max": 25, "temp_min": 20, "feels_like_max": None,
+        "rain_chance": 0, "rain_mm": None, "humidity": None,
+        "wind_max": None, "uv_max": None,
+    }
+    w.update(changes)
+    return w
+
+
+def test_high_uv_adds_sunscreen():
+    items = packing_for_day(make_weather(uv_max=7.6), [])
+    assert "Sunscreen and sunglasses" in items
+
+
+def test_none_values_do_not_crash():
+    items = packing_for_day(make_weather(temp_max=None, rain_chance=None), [])
+    assert items == []
+
+
+def test_attraction_gets_walking_shoes():
+    items = packing_for_day(None, [{"type": "attraction"}])
+    assert "Comfortable walking shoes" in items
