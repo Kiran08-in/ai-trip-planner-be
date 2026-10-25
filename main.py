@@ -3,7 +3,7 @@ from schema import TripRequest
 from services.geocode import geocode_city
 from services.weather import get_weather
 from services.places import get_places
-from services.planner import group_into_days
+from services.planner import group_into_days,pick_mix
 import httpx
 from services.budget import pick_tier, estimate_range
 from fastapi.middleware.cors import CORSMiddleware
@@ -33,7 +33,8 @@ async def plan_trip(trip: TripRequest):
         raise HTTPException(status_code=404, detail="no places found")
 
     per_day = max(1, min(4, len(places) // trip.days))
-    days = group_into_days(places, trip.days, per_day=per_day)
+    chosen = pick_mix(places, trip.days * per_day)
+    days = group_into_days(chosen, trip.days, per_day=per_day)
 
     try:
         weather = await get_weather(location["lat"], location["lon"], trip.days)

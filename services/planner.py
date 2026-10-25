@@ -40,6 +40,28 @@ def group_into_days(places, days, per_day=3):
 
     return plan
 
+def pick_mix(places, count, max_share=0.5):
+    cap = max(1, math.ceil(count * max_share))
+    chosen = []
+    used = {}
+
+    for p in places:
+        if len(chosen) == count:
+            break
+        kind = p["type"]
+        if used.get(kind, 0) >= cap:
+            continue
+        chosen.append(p)
+        used[kind] = used.get(kind, 0) + 1
+
+    for p in places:
+        if len(chosen) == count:
+            break
+        if p not in chosen:
+            chosen.append(p)
+
+    return chosen
+
 if __name__ == "__main__":
     places = [
         {"name": "Calangute Beach", "lat": 15.5439, "lon": 73.7553},

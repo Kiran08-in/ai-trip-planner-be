@@ -1,4 +1,4 @@
-from services.planner import haversine_km, group_into_days
+from services.planner import haversine_km, group_into_days,pick_mix
 from services.budget import pick_tier
 from services.clothing import packing_for_day
 from services.wiki_pedia import kind_of
@@ -72,3 +72,11 @@ def test_none_values_do_not_crash():
 def test_attraction_gets_walking_shoes():
     items = packing_for_day(None, [{"type": "attraction"}])
     assert "Comfortable walking shoes" in items
+
+def test_pick_mix_does_not_fill_with_one_type():
+    places = [{"name": str(i), "type": "temple"} for i in range(6)]
+    places.append({"name": "zoo", "type": "park"})
+    chosen = pick_mix(places, 4)
+    types = [p["type"] for p in chosen]
+    assert len(chosen) == 4
+    assert "park" in types
