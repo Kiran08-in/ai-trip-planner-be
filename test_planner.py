@@ -1,4 +1,4 @@
-from services.planner import haversine_km, group_into_days,pick_mix
+from services.planner import haversine_km, group_into_days,pick_mix,travel_between,add_travel
 from services.budget import pick_tier
 from services.clothing import packing_for_day
 from services.wiki_pedia import kind_of
@@ -80,3 +80,15 @@ def test_pick_mix_does_not_fill_with_one_type():
     types = [p["type"] for p in chosen]
     assert len(chosen) == 4
     assert "park" in types
+
+def test_travel_between_uses_road_factor():
+    t = travel_between({"lat": 0, "lon": 0}, {"lat": 1, "lon": 0})
+    assert 140 < t["km"] < 146
+    assert 340 < t["minutes"] < 355
+
+
+def test_add_travel_first_stop_has_no_travel():
+    day = [{"lat": 0, "lon": 0}, {"lat": 0, "lon": 0.1}]
+    result = add_travel(day)
+    assert result[0]["travel"] is None
+    assert result[1]["travel"]["km"] > 0

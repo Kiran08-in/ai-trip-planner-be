@@ -62,6 +62,25 @@ def pick_mix(places, count, max_share=0.5):
 
     return chosen
 
+ROAD_FACTOR = 1.3
+SPEED_KMH = 25
+
+
+def travel_between(a, b):
+    straight = haversine_km(a["lat"], a["lon"], b["lat"], b["lon"])
+    km = straight * ROAD_FACTOR
+    minutes = round(km / SPEED_KMH * 60)
+    return {"km": round(km, 1), "minutes": minutes}
+
+
+def add_travel(day):
+    result = []
+    for i, place in enumerate(day):
+        stop = dict(place)
+        stop["travel"] = None if i == 0 else travel_between(day[i - 1], place)
+        result.append(stop)
+    return result
+
 if __name__ == "__main__":
     places = [
         {"name": "Calangute Beach", "lat": 15.5439, "lon": 73.7553},

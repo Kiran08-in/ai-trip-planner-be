@@ -3,7 +3,7 @@ from schema import TripRequest
 from services.geocode import geocode_city
 from services.weather import get_weather
 from services.places import get_places
-from services.planner import group_into_days,pick_mix
+from services.planner import group_into_days,pick_mix,add_travel
 import httpx
 from services.budget import pick_tier, estimate_range
 from fastapi.middleware.cors import CORSMiddleware
@@ -49,7 +49,7 @@ async def plan_trip(trip: TripRequest):
         plan.append({
             "day": i + 1,
             "weather": day_weather,
-            "places": day_places,
+            "places":  add_travel(day_places),
             "packing": packing_for_day(day_weather, day_places),
         })
 
