@@ -3,7 +3,7 @@ from schema import TripRequest
 from services.geocode import geocode_city
 from services.weather import get_weather
 from services.places import get_places
-from services.planner import group_into_days,pick_mix,add_travel
+from services.planner import group_into_days,pick_mix,add_travel,order_days_by_weather
 import httpx
 from services.budget import pick_tier, estimate_range
 from fastapi.middleware.cors import CORSMiddleware
@@ -41,6 +41,7 @@ async def plan_trip(trip: TripRequest):
     except (httpx.HTTPError, KeyError, ValueError):
         weather = []
 
+    days = order_days_by_weather(days, weather)
     plan = []
     planned_places = 0
     for i, day_places in enumerate(days):

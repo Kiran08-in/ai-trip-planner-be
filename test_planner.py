@@ -1,4 +1,4 @@
-from services.planner import haversine_km, group_into_days,pick_mix,travel_between,add_travel
+from services.planner import haversine_km, group_into_days,pick_mix,travel_between,add_travel,order_days_by_weather
 from services.budget import pick_tier
 from services.clothing import packing_for_day
 from services.wiki_pedia import kind_of
@@ -92,3 +92,16 @@ def test_add_travel_first_stop_has_no_travel():
     result = add_travel(day)
     assert result[0]["travel"] is None
     assert result[1]["travel"]["km"] > 0
+
+def test_indoor_day_goes_to_rainy_date():
+    museum_day = [{"name": "State Museum", "type": "attraction"}]
+    park_day = [{"name": "Big Park", "type": "park"}]
+    weather = [{"rain_chance": 10, "rain_mm": 0}, {"rain_chance": 90, "rain_mm": 12}]
+    result = order_days_by_weather([museum_day, park_day], weather)
+    assert result == [park_day, museum_day]
+
+
+def test_same_weather_keeps_order():
+    days = [[{"name": "A Museum", "type": "attraction"}], [{"name": "B Park", "type": "park"}]]
+    weather = [{"rain_chance": 20, "rain_mm": 0}, {"rain_chance": 20, "rain_mm": 0}]
+    assert order_days_by_weather(days, weather) == days

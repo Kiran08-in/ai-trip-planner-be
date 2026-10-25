@@ -1,4 +1,5 @@
 import math
+import re
 
 def haversine_km(lat1, lon1, lat2, lon2):
     R = 6371  # radius of the Earth in km
@@ -79,6 +80,34 @@ def add_travel(day):
         stop = dict(place)
         stop["travel"] = None if i == 0 else travel_between(day[i - 1], place)
         result.append(stop)
+    return result
+
+INDOOR_WORDS = {"museum", "planetarium", "aquarium", "gallery"}
+
+
+def is_indoor(place):
+    words = set(re.findall(r"[a-z]+", place["name"].lower()))
+    return bool(words & INDOOR_WORDS)
+
+
+def rain_score(weather):
+    if weather is None:
+        return (0, 0)
+    return (weather.get("rain_chance") or 0, weather.get("rain_mm") or 0)
+
+
+def order_days_by_weather(days, weather):
+    n = len(days)
+    day_rain = [rain_score(weather[i]) if i < len(weather) else (0, 0) for i in range(n)]
+    if len(set(day_rain)) == 1:
+        return days
+
+    dates_rainy_first = sorted(range(n), key=lambda i: day_rain[i], reverse=True)
+    groups_indoor_first = sorted(days, key=lambda d: sum(is_indoor(p) for p in d), reverse=True)
+
+    result = [None] * n
+    for date_index, group in zip(dates_rainy_first, groups_indoor_first):
+        result[date_index] = group
     return result
 
 if __name__ == "__main__":
