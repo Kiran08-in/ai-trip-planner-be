@@ -1,11 +1,22 @@
 import httpx
 
+
+DAILY = [
+    "temperature_2m_max",
+    "temperature_2m_min",
+    "apparent_temperature_max",
+    "precipitation_probability_max",
+    "precipitation_sum",
+    "relative_humidity_2m_mean",
+    "wind_speed_10m_max",
+    "uv_index_max",
+]
 async def get_weather(lat: float, lon: float, days: int):
     url = "https://api.open-meteo.com/v1/forecast"
     params = {
         "latitude": lat,
         "longitude": lon,
-        "daily": "temperature_2m_max,temperature_2m_min,precipitation_probability_max",
+        "daily": ",".join(DAILY),
         "timezone": "auto",
         "forecast_days": days
     }
@@ -16,10 +27,15 @@ async def get_weather(lat: float, lon: float, days: int):
 
     result = []
     for i in range(len(data["time"])):
-        result.append({
+                result.append({
             "date": data["time"][i],
             "temp_max": data["temperature_2m_max"][i],
             "temp_min": data["temperature_2m_min"][i],
+            "feels_like_max": data["apparent_temperature_max"][i],
             "rain_chance": data["precipitation_probability_max"][i],
+            "rain_mm": data["precipitation_sum"][i],
+            "humidity": data["relative_humidity_2m_mean"][i],
+            "wind_max": data["wind_speed_10m_max"][i],
+            "uv_max": data["uv_index_max"][i],
         })
     return result
