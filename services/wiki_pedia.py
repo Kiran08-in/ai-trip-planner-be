@@ -1,6 +1,10 @@
 import re
 import httpx
+import math
+import asyncio
 from fastapi import HTTPException
+import httpx
+
 
 URL = "https://en.wikipedia.org/w/api.php"
 HEADERS = {"User-Agent": "TripBanao/1.0 (https://github.com/Kiran08-in) httpx/0.28"}
@@ -30,7 +34,7 @@ def kind_of(title, description=""):
     return None
 
 
-async def get_nearby_places(lat, lon, radius=10000, limit=200):
+async def search_point(lat, lon, radius=10000, limit=200):
     params = {
         "action": "query",
         "generator": "geosearch",
@@ -67,4 +71,97 @@ async def get_nearby_places(lat, lon, radius=10000, limit=200):
         })
 
     print("wiki: found", len(pages), "pages, kept", len(places))
+    return places
+
+
+def points_around(lat, lon, km=8):
+    dlat = km / 111
+    dlon = km / (111 * math.cos(math.radians(lat)))
+    return [
+        (lat, lon),
+        (lat + dlat, lon),
+        (lat - dlat, lon),
+        (lat, lon + dlon),
+        (lat, lon - dlon),
+    ]
+
+async def fetch_views(client, ids):
+    params = {
+        "action": "query",
+        "pageids": "|".join(str(i) for i in ids),
+        "prop": "pageviews",
+        "format": "json",
+    }
+    result = {}
+    for _ in range(10):
+        response = await client.get(URL, params=params, headers=HEADERS)
+        response.raise_for_status()
+        data = response.json()
+        for pid, page in data.get("query", {}).get("pages", {}).items():
+            total = sum(v for v in page.get("pageviews", {}).values() if v)
+            result[int(pid)] = max(result.get(int(pid), 0), total)
+        if "continue" not in data:
+            break
+        params.update(data["continue"])
+    return result
+
+
+async def add_views(places):
+    seat = asyncio.Semaphore(3)
+
+    async with httpx.AsyncClient(timeout=10) as client:
+
+        async def one_group(ids):
+            async with seat:
+                try:
+                    return await fetch_views(client, ids)
+                except (httpx.HTTPError, ValueError) as e:
+                    print("views error:", repr(e))
+                    return {}
+
+        groups = [
+            [p["pageid"] for p in places[i:i + 50]]
+            for i in range(0, len(places), 50)
+        ]
+        results = await asyncio.gather(*(one_group(g) for g in groups))
+
+    views = {}
+    for r in results:
+        views.update(r)
+
+    for p in places:
+        p["views"] = views.get(p["pageid"], 0)
+    places.sort(key=lambda p: p["views"], reverse=True)
+    return places
+
+async def get_nearby_places(lat, lon):
+    seat = asyncio.Semaphore(3)
+
+    async def limited_search(p_lat, p_lon):
+        async with seat:
+            return await search_point(p_lat, p_lon)
+
+    points = points_around(lat, lon)
+    results = await asyncio.gather(
+        *(limited_search(p_lat, p_lon) for p_lat, p_lon in points),
+        return_exceptions=True,
+    )
+
+    if isinstance(results[0], Exception):
+        raise results[0]
+
+    seen = set()
+    places = []
+    for found in results:
+        if isinstance(found, Exception):
+            continue
+        for place in found:
+            if place["pageid"] in seen:
+                continue
+            seen.add(place["pageid"])
+            places.append(place)
+    places = await add_views(places)
+    print("wiki: total unique places", len(places))
+
+    
     return places
