@@ -1,4 +1,8 @@
+import asyncio
 import httpx
+from cache import get_cached, set_cached
+
+WEATHER_TTL_HOURS = 3
 
 
 DAILY = [
@@ -12,6 +16,10 @@ DAILY = [
     "uv_index_max",
 ]
 async def get_weather(lat: float, lon: float, days: int):
+    key = f"weather:{round(lat, 2)}:{round(lon, 2)}:{days}"
+    cached = await asyncio.to_thread(get_cached, key)
+    if cached is not None:
+        return cached
     url = "https://api.open-meteo.com/v1/forecast"
     params = {
         "latitude": lat,
@@ -38,4 +46,5 @@ async def get_weather(lat: float, lon: float, days: int):
             "wind_max": data["wind_speed_10m_max"][i],
             "uv_max": data["uv_index_max"][i],
         })
+    await asyncio.to_thread(set_cached, key, result, WEATHER_TTL_HOURS)
     return result

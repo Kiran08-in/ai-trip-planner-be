@@ -1,6 +1,7 @@
 import httpx
 import asyncio
 from cache import get_cached, set_cached
+from fastapi import HTTPException
 
 GEOCODE_TTL_HOURS = 24 * 30
 
@@ -13,10 +14,14 @@ async def geocode_city(city: str):
     params = {"q": city, "format": "json", "limit": 1, "extratags": 1}
     headers = {"user-agent": "ai-trip-planner/1.0(student project)"}
 
-    async with httpx.AsyncClient() as client:
-        response = await client.get(url, params=params, headers=headers)
-
-    data = response.json()
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            response = await client.get(url, params=params, headers=headers)
+        response.raise_for_status()
+        data = response.json()
+    except (httpx.HTTPError, ValueError) as e:
+        print("geocode error:", repr(e))
+        raise HTTPException(status_code=503, detail="City search is busy. Try again in a minute.")
     if not data: 
         return None
 
