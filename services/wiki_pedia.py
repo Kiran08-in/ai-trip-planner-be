@@ -4,11 +4,12 @@ import math
 import asyncio
 from fastapi import HTTPException
 import httpx
+from cache import get_cached, set_cached
 
 
 URL = "https://en.wikipedia.org/w/api.php"
 HEADERS = {"User-Agent": "TripBanao/1.0 (https://github.com/Kiran08-in) httpx/0.28"}
-
+PLACES_TTL_HOURS = 24 * 7
 KINDS = [
     ("temple", {"temple", "mandir", "church", "mosque", "gurudwara", "basilica", "cathedral", "shrine", "math", "monastery", "dargah"}),
     ("beach", {"beach", "bay", "coast"}),
@@ -135,6 +136,12 @@ async def add_views(places):
     return places
 
 async def get_nearby_places(lat, lon):
+    key = f"places:{round(lat, 2)}:{round(lon, 2)}"
+    cached = await asyncio.to_thread(get_cached, key)
+    if cached is not None:
+        print("cache hit:", key)
+        return cached
+
     seat = asyncio.Semaphore(3)
 
     async def limited_search(p_lat, p_lon):
@@ -161,7 +168,8 @@ async def get_nearby_places(lat, lon):
             seen.add(place["pageid"])
             places.append(place)
     places = await add_views(places)
+    if places:
+        await asyncio.to_thread(set_cached, key, places, PLACES_TTL_HOURS)
     print("wiki: total unique places", len(places))
-
     
     return places
