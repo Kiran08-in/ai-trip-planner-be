@@ -1,5 +1,4 @@
-from fastapi import FastAPI,HTTPException
-from schema import TripRequest
+from fastapi import FastAPI,HTTPException,Depends
 from services.geocode import geocode_city
 from services.weather import get_weather
 from services.places import get_places
@@ -9,6 +8,11 @@ from services.budget import pick_tier, estimate_range
 from fastapi.middleware.cors import CORSMiddleware
 from services.clothing import packing_for_day
 from services.wiki_pedia import get_nearby_places
+from sqlalchemy.orm import Session
+from database import get_db
+from models import Trip
+from schema import TripRequest, TripCreate, TripOut,TripSummary
+from sqlalchemy import select
 
 app = FastAPI()
 app.add_middleware(
@@ -81,3 +85,32 @@ async def places(lat: float, lon: float, category: str, radius: int):
     if result is None:
         raise HTTPException(status_code=400, detail="Unknown category")
     return result
+
+@app.post("/trips", response_model=TripOut, status_code=201)
+def create_trip(data: TripCreate, db: Session = Depends(get_db)):
+    trip = Trip(**data.model_dump())
+    db.add(trip)
+    db.commit()
+    db.refresh(trip)
+    return trip
+
+@app.get("/trips", response_model=list[TripSummary])
+def list_trips(db: Session = Depends(get_db)):
+    query = select(Trip).order_by(Trip.created_at.desc())
+    return db.scalars(query).all()
+
+
+@app.get("/trips/{trip_id}", response_model=TripOut)
+def get_trip(trip_id: int, db: Session = Depends(get_db)):
+    trip = db.get(Trip, trip_id)
+    if trip is None:
+        raise HTTPException(status_code=404, detail="trip not found")
+    return trip
+
+@app.delete("/trips/{trip_id}", status_code=204)
+def delete_trip(trip_id: int, db: Session = Depends(get_db)):
+    trip = db.get(Trip, trip_id)
+    if trip is None:
+        raise HTTPException(status_code=404, detail="trip not found")
+    db.delete(trip)
+    db.commit()
