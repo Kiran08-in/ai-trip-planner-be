@@ -15,6 +15,7 @@ from schema import TripRequest, TripCreate, TripOut,TripSummary
 from sqlalchemy import select
 from schema import AskRequest
 from services.ai import ask_ai, AIUnavailable
+from services.trip_parser import parse_trip, NeedMoreInfo, ParseFailed
 
 app = FastAPI()
 app.add_middleware(
@@ -124,3 +125,12 @@ async def ai_ask(body: AskRequest):
     except AIUnavailable as e:
         raise HTTPException(status_code=503, detail=str(e))
     return {"answer": answer}
+
+@app.post("/ai/parse-trip", response_model=TripRequest)
+async def ai_parse_trip(body: AskRequest):
+    try:
+        return await parse_trip(body.message)
+    except (NeedMoreInfo, ParseFailed) as e:
+        raise HTTPException(status_code=422, detail=str(e))
+    except AIUnavailable as e:
+        raise HTTPException(status_code=503, detail=str(e))
