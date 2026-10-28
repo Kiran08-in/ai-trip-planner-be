@@ -34,3 +34,6 @@ class TripSummary(BaseModel):
     days: int
     budget: int
     created_at: datetime
+
+class AskRequest(BaseModel):
+    message: str = Field(min_length=1, max_length=500)

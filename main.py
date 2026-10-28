@@ -13,6 +13,8 @@ from database import get_db
 from models import Trip
 from schema import TripRequest, TripCreate, TripOut,TripSummary
 from sqlalchemy import select
+from schema import AskRequest
+from services.ai import ask_ai, AIUnavailable
 
 app = FastAPI()
 app.add_middleware(
@@ -114,3 +116,11 @@ def delete_trip(trip_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="trip not found")
     db.delete(trip)
     db.commit()
+
+@app.post("/ai/ask")
+async def ai_ask(body: AskRequest):
+    try:
+        answer = await ask_ai([{"role": "user", "content": body.message}])
+    except AIUnavailable as e:
+        raise HTTPException(status_code=503, detail=str(e))
+    return {"answer": answer}
