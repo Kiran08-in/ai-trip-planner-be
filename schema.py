@@ -1,5 +1,6 @@
 from datetime import datetime
 from pydantic import BaseModel, Field, ConfigDict
+from typing import Literal
 
 class TripRequest(BaseModel):
     destination: str = Field(min_length=2, max_length=100)
@@ -37,3 +38,11 @@ class TripSummary(BaseModel):
 
 class AskRequest(BaseModel):
     message: str = Field(min_length=1, max_length=500)
+
+class ChatTurn(BaseModel):
+    role: Literal["user", "assistant"]
+    content: str = Field(min_length=1, max_length=2000)
+
+
+class ChatRequest(BaseModel):
+    messages: list[ChatTurn] = Field(min_length=1, max_length=20)

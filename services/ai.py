@@ -14,9 +14,9 @@ class AIUnavailable(Exception):
     pass
 
 
-async def ask_ai(messages):
+async def chat_message(messages, tools=None):
     try:
-        response = await client.chat(model=MODEL, messages=messages)
+        response = await client.chat(model=MODEL, messages=messages, tools=tools)
     except ResponseError as e:
         if e.status_code == 429:
             raise AIUnavailable("The AI is busy or the free limit is reached. Try again later.")
@@ -25,4 +25,9 @@ async def ask_ai(messages):
         raise AIUnavailable("The AI gave an error. Try again later.")
     except (httpx.HTTPError, ConnectionError, OSError):
         raise AIUnavailable("Cannot reach the AI. Check the network and try again.")
-    return response.message.content
+    return response.message
+
+
+async def ask_ai(messages):
+    message = await chat_message(messages)
+    return message.content

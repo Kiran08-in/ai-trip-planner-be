@@ -16,6 +16,8 @@ from sqlalchemy import select
 from schema import AskRequest
 from services.ai import ask_ai, AIUnavailable
 from services.trip_parser import parse_trip, NeedMoreInfo, ParseFailed
+from schema import ChatRequest
+from services.assistant import chat as assistant_chat
 
 app = FastAPI()
 app.add_middleware(
@@ -132,5 +134,12 @@ async def ai_parse_trip(body: AskRequest):
         return await parse_trip(body.message)
     except (NeedMoreInfo, ParseFailed) as e:
         raise HTTPException(status_code=422, detail=str(e))
+    except AIUnavailable as e:
+        raise HTTPException(status_code=503, detail=str(e))
+
+@app.post("/ai/chat")
+async def ai_chat(body: ChatRequest):
+    try:
+        return await assistant_chat([t.model_dump() for t in body.messages])
     except AIUnavailable as e:
         raise HTTPException(status_code=503, detail=str(e))
