@@ -2,6 +2,10 @@ from services.planner import haversine_km, group_into_days,pick_mix,travel_betwe
 from services.budget import pick_tier
 from services.clothing import packing_for_day
 from services.wiki_pedia import kind_of
+import pytest
+from pydantic import ValidationError
+from schema import PlanOptions
+from services.planner import filter_places
 
 
 def test_haversine_same_point_is_zero():
@@ -105,3 +109,19 @@ def test_same_weather_keeps_order():
     days = [[{"name": "A Museum", "type": "attraction"}], [{"name": "B Park", "type": "park"}]]
     weather = [{"rain_chance": 20, "rain_mm": 0}, {"rain_chance": 20, "rain_mm": 0}]
     assert order_days_by_weather(days, weather) == days
+
+def test_filter_places_avoids_types():
+    places = [{"name": "A Temple", "type": "temple"}, {"name": "B Park", "type": "park"}]
+    assert filter_places(places, avoid_types=["temple"]) == [places[1]]
+
+
+def test_filter_places_indoor_only():
+    places = [{"name": "State Museum", "type": "attraction"}, {"name": "Big Park", "type": "park"}]
+    assert filter_places(places, indoor_only=True) == [places[0]]
+
+
+def test_plan_options_rejects_bad_values():
+    with pytest.raises(ValidationError):
+        PlanOptions(places_per_day=9)
+    with pytest.raises(ValidationError):
+        PlanOptions(avoid_types=["spaceship"])

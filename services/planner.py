@@ -110,6 +110,16 @@ def order_days_by_weather(days, weather):
         result[date_index] = group
     return result
 
+def filter_places(places, avoid_types=(), indoor_only=False):
+    result = []
+    for p in places:
+        if p["type"] in avoid_types:
+            continue
+        if indoor_only and not is_indoor(p):
+            continue
+        result.append(p)
+    return result
+
 if __name__ == "__main__":
     places = [
         {"name": "Calangute Beach", "lat": 15.5439, "lon": 73.7553},

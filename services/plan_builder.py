@@ -1,15 +1,16 @@
 import httpx
 from fastapi import HTTPException
-
 from services.geocode import geocode_city
 from services.weather import get_weather
 from services.wiki_pedia import get_nearby_places
-from services.planner import group_into_days, pick_mix, add_travel, order_days_by_weather
 from services.budget import pick_tier, estimate_range
 from services.clothing import packing_for_day
+from schema import PlanOptions
+from services.planner import group_into_days, pick_mix, add_travel, order_days_by_weather, filter_places
 
 
-async def build_plan(trip):
+async def build_plan(trip, options=None):                                   # changed
+    options = options or PlanOptions()                                      # new
     location = await geocode_city(trip.destination)
     if location is None:
         raise HTTPException(status_code=404, detail="city not found")
@@ -18,7 +19,14 @@ async def build_plan(trip):
     if not places:
         raise HTTPException(status_code=404, detail="no places found")
 
+    all_count = len(places)                                                 # new
+    places = filter_places(places, options.avoid_types, options.indoor_only)  # new
+    if not places:                                                          # new
+        raise HTTPException(status_code=404, detail="no places match these changes") 
+    
     per_day = max(1, min(4, len(places) // trip.days))
+    if options.places_per_day:                                              # new
+        per_day = min(per_day, options.places_per_day) 
     chosen = pick_mix(places, trip.days * per_day)
     days = group_into_days(chosen, trip.days, per_day=per_day)
 
@@ -41,7 +49,7 @@ async def build_plan(trip):
             "packing": packing_for_day(day_weather, day_places),
         })
 
-    tier = pick_tier(location["population"], len(places))
+    tier = pick_tier(location["population"], all_count)
     cost = estimate_range(tier, len(days), planned_places, trip.budget)
 
     note = None
