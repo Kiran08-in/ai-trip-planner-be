@@ -56,3 +56,8 @@ class PlanOptions(BaseModel):
 class ReplanRequest(BaseModel):
     trip: TripRequest
     message: str = Field(min_length=1, max_length=500)
+
+class PackingNoteRequest(BaseModel):
+    trip: TripRequest
+    options: PlanOptions | None = None
+    about_me: str = Field(default="", max_length=200)

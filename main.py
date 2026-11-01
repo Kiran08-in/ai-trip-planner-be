@@ -10,7 +10,7 @@ from services.wiki_pedia import get_nearby_places
 from sqlalchemy.orm import Session
 from database import get_db
 from models import Trip
-from schema import TripRequest, TripCreate, TripOut,TripSummary,AskRequest,ReplanRequest
+from schema import TripRequest, TripCreate, TripOut,TripSummary,AskRequest,ReplanRequest,PackingNoteRequest
 from sqlalchemy import select
 from services.ai import ask_ai, AIUnavailable
 from services.trip_parser import parse_trip, NeedMoreInfo, ParseFailed
@@ -18,6 +18,7 @@ from schema import ChatRequest
 from services.assistant import chat as assistant_chat
 from services.plan_builder import build_plan
 from services.replanner import understand_request, ReplanFailed
+from services.packing_note import write_note
 
 app = FastAPI()
 app.add_middleware(
@@ -117,3 +118,12 @@ async def ai_replan(body: ReplanRequest):
         raise HTTPException(status_code=503, detail=str(e))
     result = await build_plan(body.trip, options)
     return {**result, "reason": reason, "options": options.model_dump()}
+
+@app.post("/ai/packing-note")
+async def ai_packing_note(body: PackingNoteRequest):
+    result = await build_plan(body.trip, body.options)
+    try:
+        note = await write_note(result, body.about_me)
+    except AIUnavailable as e:
+        raise HTTPException(status_code=503, detail=str(e))
+    return {"note": note, "packing": [d["packing"] for d in result["plan"]]}
