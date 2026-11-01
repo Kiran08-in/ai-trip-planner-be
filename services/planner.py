@@ -25,7 +25,7 @@ def nearest_place(current, candidates):
     return best
 
 
-def group_into_days(places, days, per_day=3):
+def group_into_days(places, days, per_day=3, max_hop_km=None):          # changed
     remaining = places[:]
     plan = []
 
@@ -35,6 +35,10 @@ def group_into_days(places, days, per_day=3):
         day = [remaining.pop(0)]
         while len(day) < per_day and remaining:
             nxt = nearest_place(day[-1], remaining)
+            if max_hop_km is not None:                                   # new
+                hop = haversine_km(day[-1]["lat"], day[-1]["lon"], nxt["lat"], nxt["lon"])  # new
+                if hop > max_hop_km:                                     # new
+                    break                                                # new
             remaining.remove(nxt)
             day.append(nxt)
         plan.append(day)

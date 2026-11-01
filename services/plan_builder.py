@@ -27,9 +27,12 @@ async def build_plan(trip, options=None):                                   # ch
     per_day = max(1, min(4, len(places) // trip.days))
     if options.places_per_day:                                              # new
         per_day = min(per_day, options.places_per_day) 
-    chosen = pick_mix(places, trip.days * per_day)
-    days = group_into_days(chosen, trip.days, per_day=per_day)
-
+    pool_size = trip.days * per_day
+    if options.max_hop_km:
+        pool_size = min(len(places), pool_size * 3)
+    chosen = pick_mix(places, pool_size)
+    days = group_into_days(chosen, trip.days, per_day=per_day, max_hop_km=options.max_hop_km)
+    
     try:
         weather = await get_weather(location["lat"], location["lon"], trip.days)
     except (httpx.HTTPError, KeyError, ValueError):

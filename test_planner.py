@@ -125,3 +125,22 @@ def test_plan_options_rejects_bad_values():
         PlanOptions(places_per_day=9)
     with pytest.raises(ValidationError):
         PlanOptions(avoid_types=["spaceship"])
+
+def test_group_into_days_respects_max_hop():
+    places = [
+        {"name": "A", "lat": 0.00, "lon": 0.0},
+        {"name": "B", "lat": 0.01, "lon": 0.0},
+        {"name": "C", "lat": 0.50, "lon": 0.0},
+    ]
+    days = group_into_days(places, 1, per_day=3, max_hop_km=5)
+    assert [p["name"] for p in days[0]] == ["A", "B"]
+
+
+def test_group_into_days_without_max_hop_takes_all():
+    places = [
+        {"name": "A", "lat": 0.00, "lon": 0.0},
+        {"name": "B", "lat": 0.01, "lon": 0.0},
+        {"name": "C", "lat": 0.50, "lon": 0.0},
+    ]
+    days = group_into_days(places, 1, per_day=3)
+    assert [p["name"] for p in days[0]] == ["A", "B", "C"]
