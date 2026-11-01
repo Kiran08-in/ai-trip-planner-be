@@ -52,3 +52,7 @@ class PlanOptions(BaseModel):
     avoid_types: list[Literal["temple", "beach", "park", "viewpoint", "attraction"]] = Field(default_factory=list)
     indoor_only: bool = False
     max_hop_km: float | None = Field(default=None, gt=0, le=50)
+
+class ReplanRequest(BaseModel):
+    trip: TripRequest
+    message: str = Field(min_length=1, max_length=500)

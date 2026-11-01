@@ -3,7 +3,6 @@ from services.geocode import geocode_city
 from services.weather import get_weather
 from services.places import get_places
 from services.planner import group_into_days,pick_mix,add_travel,order_days_by_weather
-import httpx
 from services.budget import pick_tier, estimate_range
 from fastapi.middleware.cors import CORSMiddleware
 from services.clothing import packing_for_day
@@ -11,14 +10,14 @@ from services.wiki_pedia import get_nearby_places
 from sqlalchemy.orm import Session
 from database import get_db
 from models import Trip
-from schema import TripRequest, TripCreate, TripOut,TripSummary
+from schema import TripRequest, TripCreate, TripOut,TripSummary,AskRequest,ReplanRequest
 from sqlalchemy import select
-from schema import AskRequest
 from services.ai import ask_ai, AIUnavailable
 from services.trip_parser import parse_trip, NeedMoreInfo, ParseFailed
 from schema import ChatRequest
 from services.assistant import chat as assistant_chat
 from services.plan_builder import build_plan
+from services.replanner import understand_request, ReplanFailed
 
 app = FastAPI()
 app.add_middleware(
@@ -107,3 +106,14 @@ async def ai_chat(body: ChatRequest):
         return await assistant_chat([t.model_dump() for t in body.messages])
     except AIUnavailable as e:
         raise HTTPException(status_code=503, detail=str(e))
+
+@app.post("/ai/replan")
+async def ai_replan(body: ReplanRequest):
+    try:
+        options, reason = await understand_request(body.message)
+    except ReplanFailed as e:
+        raise HTTPException(status_code=422, detail=str(e))
+    except AIUnavailable as e:
+        raise HTTPException(status_code=503, detail=str(e))
+    result = await build_plan(body.trip, options)
+    return {**result, "reason": reason, "options": options.model_dump()}
