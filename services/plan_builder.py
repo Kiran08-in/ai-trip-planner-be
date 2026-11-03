@@ -7,10 +7,11 @@ from services.budget import pick_tier, estimate_range
 from services.clothing import packing_for_day
 from schema import PlanOptions
 from services.planner import group_into_days, pick_mix, add_travel, order_days_by_weather, filter_places
+from services.photos import get_photos, attach_photos
 
 
-async def build_plan(trip, options=None):                                   # changed
-    options = options or PlanOptions()                                      # new
+async def build_plan(trip, options=None):                                   
+    options = options or PlanOptions()                                      
     location = await geocode_city(trip.destination)
     if location is None:
         raise HTTPException(status_code=404, detail="city not found")
@@ -19,13 +20,13 @@ async def build_plan(trip, options=None):                                   # ch
     if not places:
         raise HTTPException(status_code=404, detail="no places found")
 
-    all_count = len(places)                                                 # new
-    places = filter_places(places, options.avoid_types, options.indoor_only)  # new
-    if not places:                                                          # new
+    all_count = len(places)                                                 
+    places = filter_places(places, options.avoid_types, options.indoor_only)  
+    if not places:                                                          
         raise HTTPException(status_code=404, detail="no places match these changes") 
     
     per_day = max(1, min(4, len(places) // trip.days))
-    if options.places_per_day:                                              # new
+    if options.places_per_day:                                              
         per_day = min(per_day, options.places_per_day) 
     pool_size = trip.days * per_day
     if options.max_hop_km:
@@ -39,6 +40,7 @@ async def build_plan(trip, options=None):                                   # ch
         weather = []
 
     days = order_days_by_weather(days, weather)
+    photos = await get_photos([p["pageid"] for day in days for p in day])
 
     plan = []
     planned_places = 0
@@ -48,7 +50,7 @@ async def build_plan(trip, options=None):                                   # ch
         plan.append({
             "day": i + 1,
             "weather": day_weather,
-            "places": add_travel(day_places),
+            "places": attach_photos(add_travel(day_places), photos),
             "packing": packing_for_day(day_weather, day_places),
         })
 
