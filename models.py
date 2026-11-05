@@ -1,5 +1,5 @@
 from datetime import datetime
-from sqlalchemy import String, DateTime, func
+from sqlalchemy import String, DateTime, func,Text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 from database import Base
@@ -26,3 +26,13 @@ class Trip(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
+
+class TipChunk(Base):
+    __tablename__ = "tip_chunks"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    city: Mapped[str] = mapped_column(String(100), index=True)
+    section: Mapped[str] = mapped_column(String(50))
+    text: Mapped[str] = mapped_column(Text)
+    url: Mapped[str] = mapped_column(String(300))
+    embedding: Mapped[list] = mapped_column(JSONB)
